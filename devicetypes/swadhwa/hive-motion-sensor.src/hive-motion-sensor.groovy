@@ -11,8 +11,8 @@
  *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
- *
  */
+
 metadata {
 	definition (name: "Hive Motion Sensor", namespace: "swadhwa", author: "Sachin Wadhwa") {
 		capability "Motion Sensor"
@@ -20,7 +20,7 @@ metadata {
 		capability "Battery"
 		capability "Refresh"
 		capability "Temperature Measurement"
-
+		capability "Health Check"
 		fingerprint inClusters: "0000,0001,0003,0009,0500,0020", manufacturer: "HiveHome.com", model: "MOT003"
 	}
 
@@ -78,7 +78,6 @@ def parse(String description) {
     def name = null
 	def value = description
 	def descriptionText = null
-    log.debug "Parsing: ${description}"
     
 	Map map = [:]
 
@@ -146,9 +145,8 @@ private Map parseReportAttributeMessage(String description) {
 	}
 	Map resultMap = [:]
 
-	log.info "IN parseReportAttributeMessage()"
 	log.debug "descMap ${descMap}"
-
+	//state.lastActivity = new Date().time
 	switch(descMap.cluster) {
 		case "0001":
 			log.debug "Battery status reported"
@@ -159,12 +157,9 @@ private Map parseReportAttributeMessage(String description) {
 			}
 			break
 		default:
-			log.info descMap.cluster
-			log.info "cluster1"
+//			log.info descMap.cluster
 			break
 	}
-
-	log.info "OUT parseReportAttributeMessage()"
 	return resultMap
 }
 
@@ -222,8 +217,7 @@ private Integer convertHexToInt(hex) {
 
 def refresh() {
 	log.debug "refresh called"
-
-    return zigbee.writeAttribute(0x0500, 0x0010, 0xf0, swapEndianHex(device.hub.zigbeeEui)) + //IAS sset address
+     return zigbee.writeAttribute(0x0500, 0x0010, 0xf0, swapEndianHex(device.hub.zigbeeEui)) + //IAS sset address
     	zigbee.configureReporting(0x0406, 0x0000, 0x18, 0, 600, null) + //Occupancy 8bit bitmap
         zigbee.configureReporting(0x0402, 0x0000, 0x29, 30, 600, 1) + //Temp signed 16bit int
         zigbee.configureReporting(0x0001, 0x0020, 0x20, 10, 600, 1) + //Power unsigned 8bit
@@ -308,11 +302,8 @@ private Map getBatteryResult(rawValue) {
 	return result
 }
 
-/**
- * PING is used by Device-Watch in attempt to reach the Device
- * */
-def ping() {
-
+/* def ping() {
+	log.debug "Ping"
 	if (state.lastActivity < (now() - (1000 * device.currentValue("checkInterval"))) ){
 		log.info "ping, alive=no, lastActivity=${state.lastActivity}"
 		state.lastActivity = null
@@ -321,4 +312,26 @@ def ping() {
 		log.info "ping, alive=yes, lastActivity=${state.lastActivity}"
 		sendEvent(name: "deviceWatch-lastActivity", value: state.lastActivity, description: "Last Activity is on ${new Date((long)state.lastActivity)}", displayed: false, isStateChange: true)
 	}
+}
+ */
+def ping() {
+	log.debug "Ping"
+	return zigbee.readAttribute(zigbee.POWER_CONFIGURATION_CLUSTER, 0x0020) // Read the Battery Level
+} 
+ 
+def installed() {
+// Device wakes up every 1 hour, this interval allows us to miss one wakeup notification before marking offline
+	log.debug "Configured health checkInterval when installed()"
+	sendEvent(name: "checkInterval", value: 2 * 60 * 60 + 2 * 60, displayed: false, data: [protocol: "zigbee", hubHardwareId: device.hub.hardwareID])
+}
+
+def updated() {
+// Device wakes up every 1 hours, this interval allows us to miss one wakeup notification before marking offline
+	log.debug "Configured health checkInterval when updated()"
+	sendEvent(name: "checkInterval", value: 2 * 60 * 60 + 2 * 60, displayed: false, data: [protocol: "zigbee", hubHardwareId: device.hub.hardwareID])
+}
+
+
+def poll() {
+	ping()
 }
