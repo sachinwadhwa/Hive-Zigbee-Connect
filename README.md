@@ -6,7 +6,7 @@
 <p>&nbsp;</p>
 <p>3. Go to My Device Handler -&gt; Settings -&gt; Add New Repository</p>
 <p><span style="color: #0000ff;">Owner:&nbsp;sachinwadhwa</span></p>
-<p><span style="color: #0000ff;">Name:&nbsp;Hive-Zigbee-Connect</span></p>
+<p><span style="color: #0000ff;">Name:&nbsp;Smartthings-Swadhwa</span></p>
 <p><span style="color: #0000ff;">Branch: master</span></p>
 <p>Click Save.</p>
 <p>4. Click on update from Repository -&gt; Select this repository</p>
